@@ -1,6 +1,4 @@
 ﻿__pycache__/
 *.pyc
 .venv/
-data_fintech/
-raw_bctc/
-*.xlsx
+.pytest_cache/

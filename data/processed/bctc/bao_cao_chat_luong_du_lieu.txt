@@ -1,0 +1,47 @@
+================================================================================
+ BÁO CÁO KIỂM TRA CHẤT LƯỢNG DỮ LIỆU BCTC (DATA QUALITY REPORT)
+ Thời điểm thực hiện: 2026-11-21 01:20:24
+================================================================================
+
+1. TỔNG QUAN:
+   - Số doanh nghiệp: 10 (DIG, DXG, HPX, KDH, NLG, NVL, PDR, QCG, SRC, VHM)
+   - Tổng số quý quan sát: 160
+   - Dải thời gian KQKD: từ 2022Q2 đến 2026Q3
+   - Số file đọc: 40
+   - Đơn vị: KQKD và CĐKT tính bằng tỷ đồng; EPS/BVPS trong bảng chỉ số tính bằng nghìn đồng/cp; cột *_pct là %
+   - Ô điền theo đẳng thức Tổng tài sản = Tổng nguồn vốn: 1
+   - Ô "-" trong file gốc (không phát sinh hoặc không có số liệu) để trống, không thay bằng 0
+   - Ô bị nhiều đợt tải ghi giá trị khác nhau: KQKD 0, CĐKT 0, Chỉ số 0 (nếu có, lấy file tải sau cùng)
+
+2. KẾT QUẢ KIỂM TRA LOGIC CÂN ĐỐI KẾ TOÁN:
+   [+] Tổng tài sản = TS ngắn hạn + TS dài hạn: ĐẠT (PASSED)
+   [+] Tổng nguồn vốn = Nợ phải trả + Vốn chủ sở hữu: ĐẠT (PASSED)
+   [+] Lợi nhuận gộp = Doanh thu thuần - Giá vốn: ĐẠT (PASSED)
+
+3. TỶ LỆ DỮ LIỆU ĐẦY ĐỦ TRÊN BẢNG QUÝ:
+   - Số quý có KQKD: 160/160
+   - Số quý có CĐKT: 40/160
+
+4. ĐỘ PHỦ THEO MÃ (kỳ đầu – kỳ cuối, số quý, quý bị thiếu ở giữa):
+   - DIG KQKD: 2022Q4 – 2026Q3, 16 quý, liên tục
+   - DIG CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - DXG KQKD: 2022Q3 – 2026Q3, 16 quý, thiếu 2024Q2
+   - DXG CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - HPX KQKD: 2022Q4 – 2026Q3, 16 quý, liên tục
+   - HPX CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - KDH KQKD: 2022Q3 – 2026Q3, 16 quý, thiếu 2024Q2
+   - KDH CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - NLG KQKD: 2022Q3 – 2026Q3, 16 quý, thiếu 2024Q2
+   - NLG CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - NVL KQKD: 2022Q2 – 2026Q3, 16 quý, thiếu 2024Q2, 2025Q2
+   - NVL CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - PDR KQKD: 2022Q4 – 2026Q3, 16 quý, liên tục
+   - PDR CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - QCG KQKD: 2022Q4 – 2026Q3, 16 quý, liên tục
+   - QCG CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - SRC KQKD: 2022Q3 – 2026Q3, 16 quý, thiếu 2024Q2
+   - SRC CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   - VHM KQKD: 2022Q4 – 2026Q3, 16 quý, liên tục
+   - VHM CĐKT: 2025Q4 – 2026Q3, 4 quý, liên tục
+   CĐKT chỉ có 4 quý gần nhất vì file tóm tắt Vietstock chỉ chứa 4 quý cân đối kế toán.
+   Quý KQKD bị thiếu là do chính file Vietstock nhảy cóc kỳ (vd. Q1-2024 rồi Q3-2024); cần tải riêng kỳ đó để bổ sung.

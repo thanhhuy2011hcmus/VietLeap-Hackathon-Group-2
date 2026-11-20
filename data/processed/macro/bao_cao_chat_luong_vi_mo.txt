@@ -1,0 +1,17 @@
+================================================================================
+ BÁO CÁO CHẤT LƯỢNG DỮ LIỆU VĨ MÔ
+ Thời điểm: 2026-11-21 01:20:26
+================================================================================
+Đơn vị: lãi suất và lạm phát tính bằng %; CPI Mỹ là chỉ số (1982–84 = 100).
+Lãi suất Fed/NHNN là lãi suất chính sách, không phải lãi suất vay của doanh nghiệp.
+
+FRED
+  fred_CPIAUCSL_2019-2026.csv: 94 dòng, 2019-01 – 2026-10, ô trống: 2025-10
+  fred_DFEDTARU_thang_cuoiky_2019-2026.csv: 93 dòng, 2019-01 – 2026-09, ô trống: không
+  fred_DGS10_thang_trungbinh_2019-2026.csv: 94 dòng, 2019-01 – 2026-10, ô trống: 2026-10
+  CPI Mỹ: nội suy 1 tháng (2025-10)
+  UST 10 năm: bỏ 1 tháng chưa công bố ở cuối (2026-10)
+IMF: 13 năm; thực tế 2019–2025, ước tính 2026, dự báo 2027–2031 (giữ trong file, phân biệt bằng cột data_type)
+NHNN: 16 quyết định; ô trống ngày/số QĐ 8 -> 0
+  Chuỗi đứt gãy (mức trước ≠ mức sau đợt trước, nguồn thiếu đợt điều chỉnh): deposit_cap_1m_6m 2023-06-19; overnight 2023-06-19; priority_lending_cap 2023-06-19; refinancing 2023-06-19
+Quý: 2019Q1 – 2026Q3; bỏ quý chưa đủ 3 tháng: 2026Q4

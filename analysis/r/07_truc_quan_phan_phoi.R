@@ -1,69 +1,57 @@
 # 07 - Vẽ hình về phân phối và ngoại lai
 source("analysis/r/common.R")
 
-p <- read_csv(file.path(PROC, "panel_quarterly.csv"), show_col_types = FALSE)
-shock <- read_csv(file.path(PROC, "stress_calibration.csv"), show_col_types = FALSE) %>%
-  filter(ticker != "MEDIAN")
+f <- read("features/bien_moi_quy.csv") %>% filter(ticker %in% RE)
+now <- f %>% filter(period == LATEST_Q) %>% arrange(cash_coverage)
 
-# hình 7.1 - hệ số bao phủ nợ vay ngắn hạn tại quý mới nhất
-# (tiền + đầu tư ngắn hạn + CFO 12 tháng) / nợ vay ngắn hạn; dưới 1 là không đủ
-now <- p %>%
-  filter(period == LATEST_Q) %>%
-  arrange(liquidity_coverage) %>%
-  mutate(ticker = factor(ticker, ticker),
-         cov = pmin(liquidity_coverage, 6),      # DIG 14x, cắt bớt cho dễ nhìn
-         label = sprintf("%.2fx  (%s tỷ)", liquidity_coverage,
-                         format(round(liquidity_gap_12m), big.mark = ",")))
-
-g <- ggplot(now, aes(cov, ticker)) +
-  geom_col(aes(fill = cov < 1), width = 0.7, show.legend = FALSE) +
+# hình 7.1 - tiền + đầu tư ngắn hạn so với nợ ngắn hạn; dưới 1 là không đủ
+g <- ggplot(now, aes(cash_coverage, factor(ticker, ticker))) +
+  geom_col(aes(fill = cash_coverage < 1), width = 0.7, show.legend = FALSE) +
   geom_vline(xintercept = 1, linetype = "dashed") +
-  geom_text(aes(x = pmax(cov, 0) + 0.1, label = label), hjust = 0, size = 2.8) +
+  geom_text(aes(label = sprintf("%.2fx  (%s tỷ)", cash_coverage,
+                                format(round(liquidity_gap), big.mark = ",", trim = TRUE))),
+            hjust = -0.05, size = 2.8) +
   scale_fill_manual(values = c(`FALSE` = BLUE, `TRUE` = ORANGE)) +
-  xlim(-1.6, 8.2) +
-  labs(x = "hệ số bao phủ (lần), cột cắt ở 6", y = NULL)
-ggsave(file.path(FIG, "07_1.png"), g, width = 8, height = 4.2, dpi = 110, bg = "white")
-print(now %>% transmute(ticker = as.character(ticker), liquidity_coverage = round(liquidity_coverage, 2),
-                        liquidity_gap_12m = round(liquidity_gap_12m, 2)) %>% as.data.frame(), row.names = FALSE)
-
-# hình 7.2 - cú sốc 2022-2023 của từng DN, ghi tên DN ngoại lai
-labels <- c(sales_shock_pct = "doanh thu (%)", adv_shock_pct = "khách trả trước (%)",
-            rate_shock_pp = "lãi suất thực trả (điểm %)", rollover_stress = "vay mới / trả nợ")
-long <- shock %>%
-  select(ticker, all_of(names(labels))) %>%
-  pivot_longer(-ticker, names_to = "var", values_to = "x") %>%
-  filter(!is.na(x)) %>%
-  group_by(var) %>%
-  mutate(out = x < quantile(x, .25) - 1.5 * IQR(x) | x > quantile(x, .75) + 1.5 * IQR(x)) %>%
-  arrange(x, .by_group = TRUE) %>%
-  mutate(vj = ifelse(cumsum(out) %% 2 == 1, -1.1, 2.1)) %>%   # so le nhãn cho khỏi đè nhau
-  ungroup() %>%
-  mutate(label = factor(labels[var], labels))
-
-g <- ggplot(long, aes(x, "")) +
-  geom_boxplot(fill = "#cfe0f6", colour = BLUE, outlier.colour = ORANGE, width = 0.6) +
-  geom_text(data = filter(long, out), aes(label = ticker, vjust = vj), size = 2.8) +
-  facet_wrap(~label, ncol = 1, scales = "free") +
-  labs(x = NULL, y = NULL)
-ggsave(file.path(FIG, "07_2.png"), g, width = 8, height = 5.2, dpi = 110, bg = "white")
-cat("\n")
-for (v in names(labels)) {
-  d <- filter(long, var == v)
-  ds <- if (any(d$out)) paste(d$ticker[d$out], sprintf("%.2f", d$x[d$out]), collapse = ", ") else "không có"
-  cat(sprintf("%s: trung vị %.2f; ngoại lai %s\n", v, median(d$x), ds))
-}
-
-# hình 7.3 - lãi suất thực trả trên mọi quan sát có số 12 tháng
-r <- filter(p, !is.na(implied_rate_pct))
-hi <- quantile(r$implied_rate_pct, .75) + 1.5 * IQR(r$implied_rate_pct)
-
-g <- ggplot(r, aes(pmin(implied_rate_pct, 30))) +
-  geom_histogram(binwidth = 1, boundary = 0, fill = BLUE, colour = "white") +
-  geom_vline(xintercept = median(r$implied_rate_pct), linetype = "dashed") +
-  geom_vline(xintercept = hi, colour = ORANGE) +
-  labs(x = "lãi vay đã trả 12 tháng / nợ vay bình quân (%), cắt ở 30", y = "số quan sát")
-ggsave(file.path(FIG, "07_3.png"), g, width = 8, height = 3, dpi = 110, bg = "white")
-cat(sprintf("\ntrung vị %.2f%%, ngưỡng ngoại lai %.2f%%\n", median(r$implied_rate_pct), hi))
-out <- r %>% filter(implied_rate_pct > hi) %>% arrange(desc(implied_rate_pct))
-print(out %>% select(ticker, period, implied_rate_pct, interest_paid_ttm, total_debt) %>%
+  xlim(0, 1.6) +
+  labs(x = "(tiền + đầu tư ngắn hạn) / nợ ngắn hạn (lần)", y = NULL)
+ggsave(file.path(FIG, "07_1.png"), g, width = 8, height = 4, dpi = 110, bg = "white")
+print(now %>% select(ticker, cash_coverage, liquidity_gap) %>%
         mutate(across(where(is.numeric), ~ round(.x, 2))) %>% as.data.frame(), row.names = FALSE)
+
+# hình 7.2 - doanh thu quý so cùng kỳ theo từng doanh nghiệp (cắt ở ±300% cho dễ nhìn)
+d <- filter(f, !is.na(revenue_yoy_pct))
+order <- d %>% group_by(ticker) %>% summarise(m = median(revenue_yoy_pct)) %>% arrange(m) %>% pull(ticker)
+g <- ggplot(d, aes(pmin(pmax(revenue_yoy_pct, -100), 300), factor(ticker, order))) +
+  geom_boxplot(fill = "#cfe0f6", colour = BLUE, outlier.colour = ORANGE, width = 0.6) +
+  geom_vline(xintercept = 0, colour = GREY) +
+  labs(x = "doanh thu quý so cùng kỳ năm trước (%), cắt ở -100 và 300", y = NULL)
+ggsave(file.path(FIG, "07_2.png"), g, width = 8, height = 4.2, dpi = 110, bg = "white")
+hi <- quantile(d$revenue_yoy_pct, .75) + 1.5 * IQR(d$revenue_yoy_pct)
+big <- d %>% filter(revenue_yoy_pct > hi) %>% arrange(desc(revenue_yoy_pct))
+cat(sprintf("\nngưỡng ngoại lai trên %.1f%%, %d quan sát vượt:\n", hi, nrow(big)))
+print(big %>% select(ticker, period, revenue_yoy_pct) %>%
+        mutate(revenue_yoy_pct = round(revenue_yoy_pct, 2)) %>% as.data.frame(), row.names = FALSE)
+
+# hình 7.3 - phân phối doanh thu so cùng kỳ: năm 2023 so với các quý sau
+d <- d %>% mutate(nhom = ifelse(period <= "2023Q4", "năm 2023", "2024 trở đi"))
+g <- ggplot(d, aes(pmin(pmax(revenue_yoy_pct, -100), 300), fill = nhom)) +
+  geom_histogram(binwidth = 20, boundary = -100, position = "identity", alpha = 0.8, colour = "white") +
+  geom_vline(xintercept = 0) +
+  scale_fill_manual(values = c("2024 trở đi" = GREY, "năm 2023" = ORANGE), name = NULL) +
+  labs(x = "doanh thu quý so cùng kỳ (%)", y = "số quan sát") +
+  theme(legend.position = "top")
+ggsave(file.path(FIG, "07_3.png"), g, width = 8, height = 3, dpi = 110, bg = "white")
+cat("\ntrung vị năm 2023:", round(median(d$revenue_yoy_pct[d$nhom == "năm 2023"]), 2),
+    "| trung vị từ 2024:", round(median(d$revenue_yoy_pct[d$nhom != "năm 2023"]), 2), "\n")
+
+# hình 7.4 - đòn bẩy và khả năng trả nợ ngắn hạn (kích thước = khoảng thiếu hụt)
+g <- ggplot(now, aes(liab_to_equity, cash_coverage)) +
+  geom_point(aes(size = abs(pmin(liquidity_gap, 0))), colour = ORANGE, alpha = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = ticker), hjust = -0.3, vjust = -0.3, size = 2.8) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = GREY) +
+  scale_size(range = c(2, 16), trans = "sqrt") +
+  scale_x_continuous(expand = expansion(mult = c(0.05, 0.12))) +
+  labs(x = "nợ phải trả / vốn chủ sở hữu (lần)", y = "(tiền + ĐTNH) / nợ ngắn hạn (lần)")
+ggsave(file.path(FIG, "07_4.png"), g, width = 8, height = 4, dpi = 110, bg = "white")
+cat("\ntương quan giữa đòn bẩy và khả năng trả nợ ngắn hạn:",
+    round(cor(now$liab_to_equity, now$cash_coverage), 2), "\n")

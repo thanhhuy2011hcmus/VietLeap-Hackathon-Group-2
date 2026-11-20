@@ -1,28 +1,25 @@
-# 01 - Nạp dữ liệu và đổi tên biến
+# 01 - Nạp dữ liệu và đồng bộ tên biến
 import glob
+import os
 
 import pandas as pd
 
-from common import FIELDS, RAW, load_raw, to_wide
+from common import RAW, read
 
-raw = load_raw()
-print("số dòng, số cột:", raw.shape)
-print("số mã:", raw["ticker"].nunique(), "| số chỉ tiêu:", raw["field_path"].nunique())
-print(raw[["ticker", "year", "quarter", "value"]].head(3))
+# file gốc: mỗi mã 4 đợt tải Vietstock, cộng dữ liệu vĩ mô
+for t in sorted(os.listdir(RAW + "/vietstock")):
+    print(t, len(glob.glob(f"{RAW}/vietstock/{t}/*.xls")), "file .xls")
+for f in sorted(glob.glob(RAW + "/fred/*.csv") + glob.glob(RAW + "/sbv/*.csv")):
+    print(os.path.basename(f), pd.read_csv(f).shape)
 
-# chỉ tiêu có trong file nhưng không dùng tới
-for path in sorted(set(raw["field_path"]) - set(FIELDS.values())):
-    print("bỏ:", path)
+# dữ liệu sạch: tên chỉ tiêu tiếng Việt đã đổi sang tên biến tiếng Anh ngắn
+panel = read("bctc/panel_quarterly_bctc.csv")
+macro = read("macro/macro_quy.csv")
+print("\npanel BCTC:", panel.shape, "| vĩ mô theo quý:", macro.shape)
 
-# chuyển sang bảng ngang, mỗi dòng là 1 mã trong 1 quý
-w = to_wide(raw)
-print("\nbảng ngang:", w.shape)
-
-# xem thử VHM 4 quý gần nhất, đơn vị tỷ đồng (dấu giữ nguyên như FiinQuant)
-vhm = w[w["ticker"] == "VHM"].set_index("period").tail(4)
-print((vhm[list(FIELDS)] / 1e9).round().astype(int).T)
-
-# các file còn lại trong data/raw
-for f in sorted(glob.glob(RAW + "/*.csv")):
-    if "_bctc_min_raw" not in f:
-        print(f, pd.read_csv(f).shape)
+# đồng bộ khóa thời gian: cả hai bảng dùng kỳ dạng 2026Q3 -> ghép trực tiếp
+df = panel.merge(macro, left_on="period", right_on="quarter", how="left")
+cols = ["ticker", "period", "net_revenue", "fed_upper_eoq_pct", "sbv_refinancing_eoq_pct"]
+print(df.loc[df["ticker"] == "NVL", cols].tail(5).to_string(index=False))
+print("\nquý BCTC không ghép được với vĩ mô:",
+      sorted(set(panel["period"]) - set(macro["quarter"])))

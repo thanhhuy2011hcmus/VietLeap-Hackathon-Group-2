@@ -1,25 +1,21 @@
-# 01 - Nạp dữ liệu và đổi tên biến
+# 01 - Nạp dữ liệu và đồng bộ tên biến
 source("analysis/r/common.R")
 
-raw <- load_raw()
-cat("số dòng, số cột:", dim(raw), "\n")
-cat("số mã:", n_distinct(raw$ticker), "| số chỉ tiêu:", n_distinct(raw$field_path), "\n")
-print(head(as.data.frame(raw[c("ticker", "year", "quarter", "value")]), 3))
-
-# chỉ tiêu có trong file nhưng không dùng tới
-for (path in sort(setdiff(unique(raw$field_path), FIELDS))) cat("bỏ:", path, "\n")
-
-# chuyển sang bảng ngang, mỗi dòng là 1 mã trong 1 quý
-w <- to_wide(raw)
-cat("\nbảng ngang:", dim(w), "\n")
-
-# xem thử VHM 4 quý gần nhất, đơn vị tỷ đồng (dấu giữ nguyên như FiinQuant)
-vhm <- tail(filter(w, ticker == "VHM"), 4)
-m <- t(as.matrix(vhm[names(FIELDS)])) / 1e9
-colnames(m) <- vhm$period
-print(round(m))
-
-# các file còn lại trong data/raw
-for (f in sort(Sys.glob(file.path(RAW, "*.csv")), method = "radix")) {
-  if (!grepl("_bctc_min_raw", f)) cat(f, dim(read_csv(f, show_col_types = FALSE)), "\n")
+# file gốc: mỗi mã 4 đợt tải Vietstock, cộng dữ liệu vĩ mô
+for (t in sort(list.files(file.path(RAW, "vietstock")))) {
+  cat(t, length(Sys.glob(file.path(RAW, "vietstock", t, "*.xls"))), "file .xls\n")
 }
+for (f in sort(c(Sys.glob(file.path(RAW, "fred", "*.csv")), Sys.glob(file.path(RAW, "sbv", "*.csv"))))) {
+  cat(basename(f), dim(read_csv(f, show_col_types = FALSE)), "\n")
+}
+
+# dữ liệu sạch: tên chỉ tiêu tiếng Việt đã đổi sang tên biến tiếng Anh ngắn
+panel <- read("bctc/panel_quarterly_bctc.csv")
+macro <- read("macro/macro_quy.csv")
+cat("\npanel BCTC:", dim(panel), "| vĩ mô theo quý:", dim(macro), "\n")
+
+# đồng bộ khóa thời gian: cả hai bảng dùng kỳ dạng 2026Q3 -> ghép trực tiếp
+df <- left_join(panel, macro, by = c("period" = "quarter"))
+print(as.data.frame(tail(filter(df, ticker == "NVL") %>%
+  select(ticker, period, net_revenue, fed_upper_eoq_pct, sbv_refinancing_eoq_pct), 5)), row.names = FALSE)
+cat("\nquý BCTC không ghép được với vĩ mô:", setdiff(panel$period, macro$quarter), "\n")

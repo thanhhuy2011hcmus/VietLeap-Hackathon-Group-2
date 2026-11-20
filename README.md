@@ -1,66 +1,88 @@
 # VietLeap Hackathon 2026 – Nhóm 2
 
-**Câu hỏi:** nếu lãi suất tăng và bán hàng chậm lại trong 12 tháng tới như giai đoạn 2022–2023, doanh nghiệp
-BĐS dân cư niêm yết nào không đủ tiền trả nợ đến hạn, thiếu bao nhiêu, chịu được cú sốc đến đâu, và doanh nghiệp
-cũng như ngân hàng cho vay nên làm gì?
+Dữ liệu báo cáo tài chính tóm tắt (Vietstock) của 10 doanh nghiệp, dữ liệu vĩ mô (FRED, IMF, NHNN)
+và code làm sạch.
 
-Repo này chứa phần xử lý dữ liệu: từ file thô đến bộ dữ liệu sạch và báo cáo xử lý dữ liệu.
-Chỉ những biến phục vụ trực tiếp câu hỏi trên mới được tạo.
-
-## Cấu trúc thư mục
+## Cấu trúc
 
 ```
 .
 ├── data/
-│   ├── raw/                  # dữ liệu thô, không chỉnh sửa tay
-│   └── processed/            # dữ liệu sạch (sinh ra bởi src/clean_raw_data.py)
+│   ├── raw/                          # file gốc, không sửa tay
+│   │   ├── vietstock/<MÃ>/           # 4 file *_BCTC_Tom_Tat*.xls mỗi mã (10 mã)
+│   │   ├── fred/                     # CPI Mỹ, lãi suất Fed, UST 10 năm, CPI Việt Nam (IMF)
+│   │   └── sbv/                      # quyết định lãi suất điều hành NHNN
+│   └── processed/                    # sinh ra bởi code, không sửa tay
+│       ├── bctc/
+│       │   ├── ket_qua_kinh_doanh_quy.csv
+│       │   ├── can_doi_ke_toan_quy.csv
+│       │   ├── panel_quarterly_bctc.csv
+│       │   ├── chi_so_tai_chinh_nam.csv
+│       │   └── bao_cao_chat_luong_du_lieu.txt
+│       ├── features/bien_moi_quy.csv  # 8 biến mới phục vụ câu hỏi nghiên cứu
+│       └── macro/
+│           ├── macro_thang.csv
+│           ├── macro_quy.csv
+│           ├── cpi_viet_nam_nam.csv
+│           ├── lai_suat_nhnn_su_kien.csv
+│           └── bao_cao_chat_luong_vi_mo.txt
 ├── src/
-│   ├── clean_raw_data.py     # làm sạch, tạo biến, xuất data/processed + data_quality_report.txt
-│   └── build_report.py       # chạy code phân tích và dựng báo cáo HTML
+│   ├── clean_bctc_data.py            # data/raw/vietstock -> data/processed/bctc
+│   ├── clean_macro_data.py           # data/raw/fred, sbv -> data/processed/macro
+│   ├── build_features.py             # -> data/processed/features
+│   └── build_report.py               # chạy analysis/, dựng báo cáo HTML
 ├── analysis/
-│   ├── python/               # common.py + code từng mục của báo cáo (00–07)
-│   └── r/                    # cùng nội dung, bản R
+│   ├── python/                       # common.py + 00–07, mỗi file là một mục của báo cáo
+│   └── r/                            # cùng nội dung, bản R
 ├── reports/
-│   ├── bao_cao_xu_ly_du_lieu.html
-│   └── figures/              # hình do analysis/ sinh ra (python/, r/)
-├── run_pipeline.py           # chạy toàn bộ quy trình
-└── requirements.txt
+│   ├── bao_cao_truc_quan_hoa.html    # báo cáo trực quan hóa (mở bằng trình duyệt)
+│   └── figures/python, figures/r
+├── run_pipeline.py                   # làm sạch -> tạo biến -> dựng báo cáo
+├── requirements.txt
+└── README.md
 ```
 
 ## Cách chạy
 
 ```bash
-pip install -r requirements.txt
-python run_pipeline.py            # làm sạch + dựng báo cáo
-python run_pipeline.py --clean    # chỉ làm sạch
-python run_pipeline.py --report   # chỉ dựng báo cáo
+python -m pip install -r requirements.txt
+python run_pipeline.py
 ```
 
-Phần R cần R ≥ 4.2 với các gói `dplyr`, `tidyr`, `readr`, `ggplot2`. Mọi lệnh chạy từ thư mục gốc repo; các file
-trong `analysis/` cũng chạy riêng được, ví dụ `python analysis/python/04_tao_bien_moi.py` hoặc
-`Rscript analysis/r/04_tao_bien_moi.R`.
+Phần R của báo cáo cần R ≥ 4.2 với `dplyr`, `tidyr`, `readr`, `ggplot2`; Python cần thêm `matplotlib`.
 
-## Dữ liệu đầu vào (`data/raw/`)
+Thêm mã mới: tạo `data/raw/vietstock/<MÃ>/`, thả các file `<MÃ>_BCTC_Tom_Tat*.xls` vào rồi chạy lại.
+Các đợt tải `(1)`, `(2)`, `(3)` được gộp và khử trùng lặp; nếu hai đợt ghi số khác nhau cho cùng một ô,
+code lấy file tải sau cùng và ghi số ô xung đột vào báo cáo.
 
-| File | Nguồn | Dùng để |
-|---|---|---|
-| `<MÃ>_bctc_min_raw.csv` (13 mã) | FiinQuant | Tiền, nợ vay, dòng tiền, doanh thu, khách trả trước theo quý |
-| `fred_DFEDTARU_…`, `fred_DGS10_…` | FRED | Xác định thời điểm cú sốc lãi suất |
-| `sbv_lai_suat_dieu_hanh_trich_nguon.csv` | NHNN | Lãi suất tái cấp vốn |
-| `hnx_54_to_chuc_cham_tra_trich_nguon.csv` | HNX | Nhãn chậm trả trái phiếu 2022–2023 để kiểm chứng |
-| `bctc_full_VHM_2026Q3.csv`, `fred_CPIAUCSL_…`, `fred_VNMPCPIPCPPPT_…` | – | Không dùng (trùng nguồn / không phục vụ câu hỏi) |
+## Dữ liệu sạch
 
-Thêm mã mới: đặt file `<MÃ>_bctc_min_raw.csv` vào `data/raw/` rồi chạy lại `python run_pipeline.py`.
-
-## Dữ liệu sạch (`data/processed/`)
+**BCTC** (đơn vị tỷ đồng; EPS/BVPS nghìn đồng/cp; `period` dạng `2026Q3`)
 
 | File | Nội dung |
 |---|---|
-| `panel_quarterly.csv` | Mã × quý: nguồn trả nợ, nợ đến hạn, dòng tiền 12 tháng (TTM), thiếu hụt thanh khoản, hệ số bao phủ, tỷ lệ đảo nợ, lãi suất thực trả, nợ/VCSH |
-| `stress_calibration.csv` | Cú sốc 2022–2023 của từng DN (TTM 2023Q2 so với TTM 2022Q2) và trung vị ngành |
-| `macro_quarterly.csv` | Lãi suất tái cấp vốn NHNN, lãi suất Fed, UST 10 năm theo quý |
-| `sbv_policy_events.csv` | Quyết định lãi suất điều hành NHNN đã làm sạch |
-| `hnx_default_labels.csv` | Nhãn chậm trả trái phiếu theo mã |
-| `data_quality_report.txt` | Nhật ký kiểm tra và xử lý dữ liệu |
+| `ket_qua_kinh_doanh_quy.csv` | Kết quả kinh doanh, 16 quý mỗi mã (2022–2026) |
+| `can_doi_ke_toan_quy.csv` | Cân đối kế toán, 4 quý gần nhất (2025Q4–2026Q3) |
+| `panel_quarterly_bctc.csv` | Ghép hai bảng trên theo `ticker` × `period` |
+| `chi_so_tai_chinh_nam.csv` | Chỉ số tài chính theo năm (2022–2025) |
 
-Lưu ý: dữ liệu BCTC thiếu 2024Q1–2025Q3 nên chỉ tiêu 12 tháng (TTM) chỉ tính được cho 2021Q4–2023Q4 và 2026Q3.
+**Vĩ mô** (lãi suất, lạm phát tính bằng %)
+
+| File | Nội dung |
+|---|---|
+| `macro_thang.csv` | CPI Mỹ (chỉ số và % so cùng kỳ), trần lãi suất Fed cuối tháng, lợi suất UST 10 năm |
+| `macro_quy.csv` | Tổng hợp theo quý + lãi suất tái cấp vốn NHNN cuối quý (2019Q1–2026Q3) |
+| `cpi_viet_nam_nam.csv` | Lạm phát Việt Nam theo IMF; cột `data_type`: `thuc_te` / `uoc_tinh` / `du_bao` |
+| `lai_suat_nhnn_su_kien.csv` | 16 quyết định lãi suất NHNN, mức trước/sau đã tách khỏi câu chữ |
+
+## Lưu ý về dữ liệu
+
+- **`SRC` không phải SCR.** Công ty trong các file `SRC_*` có tổng tài sản khoảng 1.300 tỷ, vốn điều lệ 280,66 tỷ,
+  khớp với Cao su Sao Vàng (mã SRC), không phải Địa ốc Sài Gòn Thương Tín (SCR). Nếu cần SCR, tải lại đúng mã.
+- **Quý bị thiếu do nguồn:** file Vietstock nhảy cóc kỳ, nên KQKD của DXG, KDH, NLG, NVL, SRC thiếu 2024Q2,
+  NVL thiếu thêm 2025Q2. Muốn đủ, tải riêng các kỳ đó.
+- Cân đối kế toán chỉ có 4 quý gần nhất vì file tóm tắt chỉ chứa 4 quý. Một ô tổng tài sản trống (SRC 2026Q1)
+  được điền bằng tổng nguồn vốn cùng quý (đẳng thức kế toán); mọi ô `-` khác để trống, không thay bằng 0.
+- Vĩ mô: CPI Mỹ thiếu 10/2025 được nội suy và gắn cờ `us_cpi_imputed`; tháng 10/2026 của UST 10 năm chưa công
+  bố nên bị bỏ; dữ liệu NHNN chỉ có các quyết định 10/2022–06/2023 và thiếu vài đợt giảm năm 2023
+  (xem `bao_cao_chat_luong_vi_mo.txt`). Lãi suất chính sách không phải lãi suất vay của doanh nghiệp.

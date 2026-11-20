@@ -1,36 +1,27 @@
 # 05 - Thống kê mô tả
+import numpy as np
 import pandas as pd
 
-from common import BASE_Q, LATEST_Q, PROC
+from common import LATEST_Q, RE, read
 
-p = pd.read_csv(PROC + "/panel_quarterly.csv")
-shock = pd.read_csv(PROC + "/stress_calibration.csv")
-cols = ["liquidity_gap_12m", "liquidity_coverage", "rollover_ratio",
-        "implied_rate_pct", "debt_to_equity"]
+f = read("features/bien_moi_quy.csv")
+f = f[f["ticker"].isin(RE)]
+cols = ["liquidity_gap", "cash_coverage", "inventory_share", "liab_to_equity", "fin_cost_ratio_pct"]
 
+now = f[f["period"] == LATEST_Q]
+t = now[cols].describe().T
+t["skew"] = now[cols].skew()
+print("quý", LATEST_Q, "-", len(now), "doanh nghiệp BĐS")
+print(t.round(2))
 
-def mo_ta(df):
-    t = df[cols].describe().T
-    t["skew"] = df[cols].skew()
-    return t.round(2)
+# cú sốc doanh thu: so cùng kỳ trong năm 2023 với các giai đoạn sau
+f["giai_doan"] = np.select([f["period"] <= "2023Q4", f["period"] <= "2025Q3"],
+                           ["1. 2023 (khủng hoảng)", "2. 2024-2025Q3"], "3. 2025Q4-2026Q3")
+g = f.groupby("giai_doan")["revenue_yoy_pct"]
+print("\ndoanh thu quý so cùng kỳ (%):")
+print(pd.DataFrame({"n": g.count(), "trung_vi": g.median(), "ty_le_giam": g.apply(lambda s: (s.dropna() < 0).mean())}))
 
-
-now = p[p["period"] == LATEST_Q]
-print("quý", LATEST_Q, "-", len(now), "doanh nghiệp")
-print(mo_ta(now))
-
-ttm = p.dropna(subset=["cfo_ttm"])
-print("\ntất cả các quý có số 12 tháng -", len(ttm), "quan sát")
-print(mo_ta(ttm))
-
-# ai không đủ tiền trả nợ vay ngắn hạn nếu không vay thêm được
-thieu = now[now["liquidity_gap_12m"] < 0].sort_values("liquidity_gap_12m")
-print("\nthiếu tiền tại", LATEST_Q)
-print(thieu[["ticker", "liquidity_gap_12m", "liquidity_coverage", "rollover_ratio"]]
-      .round(2).to_string(index=False))
-
-# chỉ số này có nhận ra những DN đã chậm trả trái phiếu năm 2022-2023 không?
-v = shock[shock["ticker"] != "MEDIAN"]
-print("\nthiếu hụt tại", BASE_Q, "so với danh sách chậm trả HNX:")
-print(pd.crosstab(v["liquidity_gap_base"] < 0, v["bond_default_flag"].astype(int),
-                  rownames=["gap < 0"], colnames=["có tên HNX"], margins=True))
+# xếp hạng theo khoảng thiếu hụt thanh khoản tại quý mới nhất
+print("\nxếp hạng thiếu hụt tại", LATEST_Q, "(tỷ đồng):")
+print(now.sort_values("liquidity_gap")[["ticker", "liquidity_gap", "cash_coverage", "liab_to_equity"]]
+      .to_string(index=False))
