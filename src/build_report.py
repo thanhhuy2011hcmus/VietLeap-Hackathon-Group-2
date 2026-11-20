@@ -33,6 +33,89 @@ os.chdir(ROOT)
 from common import BASE_Q, LATEST_Q, QUARTERS, STRESS_Q, close, load_raw, to_wide  # noqa: E402
 
 
+# ═══════════════════════ TÔ MÀU CODE THEO VS CODE DARK MODERN ═══════════════════════
+# Tự viết, không cần thư viện ngoài. Màu theo theme mặc định Dark Modern (Dark+) của VS Code,
+# gồm cả tô màu ngoặc theo tầng (bracket pair colorization) đang bật sẵn trong VS Code.
+PY_CONTROL = {"import", "from", "as", "for", "in", "if", "elif", "else", "return", "while", "break",
+              "continue", "with", "try", "except", "finally", "raise", "pass", "yield", "assert", "del"}
+PY_STORAGE = {"def", "class", "lambda", "and", "or", "not", "is", "True", "False", "None", "global"}
+PY_TYPES = {"int", "str", "float", "list", "dict", "set", "tuple", "bool", "object", "range"}
+R_CONTROL = {"if", "else", "for", "in", "while", "repeat", "return", "next", "break"}
+R_STORAGE = {"function", "TRUE", "FALSE", "NULL", "NA", "Inf", "NaN", "NA_real_", "NA_character_"}
+BRACKETS = ["#FFD700", "#DA70D6", "#179FFF"]
+
+TOKEN = {
+    "py": re.compile(
+        r'(?P<com>#[^\n]*)'
+        r'|(?P<str>[rRfFbB]{0,2}(?:"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'))'
+        r'|(?P<num>\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)|(?P<id>[A-Za-z_]\w*)|(?P<ws>\s+)|(?P<op>.)'),
+    "r": re.compile(
+        r'(?P<com>#[^\n]*)|(?P<str>"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')|(?P<bt>`[^`]*`)'
+        r'|(?P<num>\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?L?\b)|(?P<id>[A-Za-z.][A-Za-z0-9._]*)'
+        r'|(?P<ws>\s+)|(?P<op>%[^%\n]*%|<-|.)'),
+}
+
+
+def imported_modules(src):
+    """Tên module/alias sau `import` (vd. pd, np, glob) — Pylance tô màu xanh ngọc."""
+    names = set()
+    for line in src.splitlines():
+        s = line.split("#")[0].strip()
+        if s.startswith("import "):
+            for item in s[len("import "):].split(","):
+                names.add(item.split(" as ")[-1].strip().split(".")[0])
+    return names
+
+
+def id_color(t, lang, prev, nxt, modules):
+    if lang == "py":
+        if t in PY_CONTROL:
+            return "#C586C0"
+        if t in PY_STORAGE:
+            return "#569CD6"
+        if prev == "def":
+            return "#DCDCAA"
+        if nxt == "(" and (t[0].isupper() or t in PY_TYPES):
+            return "#4EC9B0"                     # lớp / kiểu: DataFrame(), int()
+        if t in modules and prev != ".":
+            return "#4EC9B0"
+    else:
+        if t in R_CONTROL:
+            return "#C586C0"
+        if t in R_STORAGE:
+            return "#569CD6"
+    if nxt == "(":
+        return "#DCDCAA"                         # hàm / phương thức
+    if prev not in (".", "$", "@") and re.fullmatch(r"[A-Z][A-Z0-9_]+", t):
+        return "#4FC1FF"                         # hằng viết hoa: RAW, FIELDS
+    return "#9CDCFE"                             # biến, thuộc tính, tham số
+
+
+def highlight(src, lang):
+    toks = [(m.lastgroup, m.group()) for m in TOKEN[lang].finditer(src)]
+    sig = [i for i, (k, _) in enumerate(toks) if k != "ws"]
+    prev = {sig[j]: toks[sig[j - 1]][1] for j in range(1, len(sig))}
+    nxt = {sig[j]: toks[sig[j + 1]][1] for j in range(len(sig) - 1)}
+    modules = imported_modules(src) if lang == "py" else set()
+    colors = {"com": "#6A9955", "str": "#CE9178", "num": "#B5CEA8", "bt": "#9CDCFE"}
+    out, depth = [], 0
+    for i, (kind, t) in enumerate(toks):
+        if kind in colors:
+            c = colors[kind]
+        elif kind == "id":
+            c = id_color(t, lang, prev.get(i, ""), nxt.get(i, ""), modules)
+        elif kind == "op" and t in "([{":
+            c, depth = BRACKETS[depth % 3], depth + 1
+        elif kind == "op" and t in ")]}":
+            depth = max(depth - 1, 0)
+            c = BRACKETS[depth % 3]
+        else:
+            out.append(html.escape(t))
+            continue
+        out.append(f'<span style="color:{c}">{html.escape(t)}</span>')
+    return "".join(out)
+
+
 # ═════════════════════════════ CHẠY CODE PHÂN TÍCH ═════════════════════════════
 def run_file(lang, name):
     folder, ext, _ = LANGS[lang]
@@ -60,7 +143,7 @@ def code_block(sid, num, with_common=False):
         srcs = (["common"] if with_common else []) + [SECTIONS[sid]]
         src_html = "".join(
             f'<div class="fname">analysis/{folder}/{n}.{ext}</div>'
-            f'<pre class="src">{html.escape(open(os.path.join(CODE, folder, f"{n}.{ext}"), encoding="utf-8").read().rstrip())}</pre>'
+            f'<pre class="src">{highlight(open(os.path.join(CODE, folder, f"{n}.{ext}"), encoding="utf-8").read().rstrip(), lang)}</pre>'
             for n in srcs)
         imgs = "".join(
             f'<img src="data:image/png;base64,{base64.b64encode(open(f, "rb").read()).decode()}" '
@@ -360,11 +443,14 @@ sec("s7", "7. Trực quan hóa (2): phân phối và ngoại lai",
 
 # ═════════════════════════════ GHÉP HTML ═════════════════════════════
 CSS = """
-:root{--bg:#fff;--ink:#1f2328;--ink2:#59636e;--muted:#6e7781;--line:#d8dee4;--th:#f6f8fa;--code:#eff1f3;--link:#0969da}
+:root{--bg:#fff;--ink:#1f2328;--ink2:#59636e;--muted:#6e7781;--line:#d8dee4;--th:#f6f8fa;--code:#eff1f3;--link:#0969da;
+--out-bg:#fffbe6;--out-head:#fff1bf;--out-line:#f0dfa0;--out-ink:#3d3300;--out-label:#7a5d00}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0d1117;--ink:#e6edf3;--ink2:#9198a1;
---muted:#8b949e;--line:#30363d;--th:#161b22;--code:#21262d;--link:#4493f8}}
+--muted:#8b949e;--line:#30363d;--th:#161b22;--code:#21262d;--link:#4493f8;
+--out-bg:#2b2614;--out-head:#3a3217;--out-line:#4d4220;--out-ink:#f2e6b8;--out-label:#e3c867}}
 :root[data-theme="dark"]{--bg:#0d1117;--ink:#e6edf3;--ink2:#9198a1;--muted:#8b949e;--line:#30363d;--th:#161b22;
---code:#21262d;--link:#4493f8}
+--code:#21262d;--link:#4493f8;
+--out-bg:#2b2614;--out-head:#3a3217;--out-line:#4d4220;--out-ink:#f2e6b8;--out-label:#e3c867}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif}
 .wrap{display:flex;align-items:flex-start;gap:40px;padding:32px 24px 80px;max-width:1320px}
@@ -400,6 +486,14 @@ border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .pane pre.out{background:var(--code)}
 .imgs{padding:12px 16px;display:grid;gap:12px;border-top:1px solid var(--line)}
 .imgs img{max-width:100%;height:auto;border:1px solid var(--line);background:#fff}
+/* khung code: màu editor VS Code Dark Modern */
+.pane .fname{background:#181818;color:#9d9d9d;border-top:1px solid #2b2b2b;padding:7px 16px}
+.pane .fname:first-child{border-top:0}
+.pane pre.src{background:#1f1f1f;color:#cccccc;font-size:13.5px;line-height:1.55}
+/* khung kết quả: nền vàng nhạt */
+.outhead{background:var(--out-head);color:var(--out-label);border-color:var(--out-line)}
+.pane pre.out{background:var(--out-bg);color:var(--out-ink)}
+.pane .imgs{background:var(--out-bg);border-top-color:var(--out-line)}
 @media (max-width:900px){.wrap{display:block;padding:20px 16px 60px}nav{position:static;margin-bottom:24px}
 h1{font-size:24px}h2{font-size:22px}}
 """
