@@ -77,7 +77,7 @@ code lấy file tải sau cùng và ghi số ô xung đột vào báo cáo.
 
 ## Lưu ý về dữ liệu
 
-- **`SRC` không phải SCR.** Công ty trong các file `SRC_*` có tổng tài sản khoảng 1.300 tỷ, vốn điều lệ 280,66 tỷ,
+- **`SRC` không phải SCR.** Công ty trong các file `SRC_*` có tổng tài sản 1.236–5.917 tỷ, vốn điều lệ 281–365 tỷ,
   khớp với Cao su Sao Vàng (mã SRC), không phải Địa ốc Sài Gòn Thương Tín (SCR). Nếu cần SCR, tải lại đúng mã.
 - **Quý bị thiếu do nguồn:** file Vietstock nhảy cóc kỳ, nên KQKD của DXG, KDH, NLG, NVL, SRC thiếu 2024Q2,
   NVL thiếu thêm 2025Q2. Muốn đủ, tải riêng các kỳ đó.

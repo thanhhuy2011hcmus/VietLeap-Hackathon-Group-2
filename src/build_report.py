@@ -202,7 +202,7 @@ cho vay nên làm gì ngay bây giờ?</p>
 mới được tạo thêm.</p>
 {table(["Ý của câu hỏi", "Biến dùng", "File"], [
     ["Ai không đủ tiền trả nợ đến hạn", code("liquid_assets") + ", " + code("short_term_liabilities") + ", "
-     + code("cash_coverage"), code("bien_moi_quy.csv")],
+     + code("cash_coverage"), code("bien_moi_quy.csv") + ", " + code("panel_quarterly_bctc.csv")],
     ["Thiếu bao nhiêu", code("liquidity_gap") + " (tỷ đồng)", code("bien_moi_quy.csv")],
     ["Bán hàng chậm lại đến mức nào", code("revenue_yoy_pct") + ", " + code("revenue_ttm"), code("bien_moi_quy.csv")],
     ["Chịu được lãi suất tăng đến đâu", code("fin_cost_ratio_pct") + ", " + code("liab_to_equity"),
@@ -222,7 +222,8 @@ dữ liệu.</p>""")
 
 # ---------- 0 ----------
 def rows_from_map(m, kind="Liên tục", unit="tỷ đồng", used=()):
-    return [[code(v), html.escape(k), kind, unit, "có" if v in used else ""] for k, v in m.items()]
+    return [[code(v), html.escape(k), kind, "đồng/cp" if v == "basic_eps_vnd" else unit, "có" if v in used else ""]
+            for k, v in m.items()]
 
 
 USED = {"net_revenue", "financial_expense", "cogs", "gross_profit", "cash_and_equivalents", "short_term_investments",
@@ -266,7 +267,7 @@ sec("s0", "0. Từ điển biến",
     + "<h3>0.3. Chỉ số tài chính theo năm — <code>chi_so_tai_chinh_nam.csv</code></h3>"
     + table(dict_head, ratio_rows, "dict")
     + "<h3>0.4. Vĩ mô — <code>macro_thang.csv</code>, <code>macro_quy.csv</code>, <code>cpi_viet_nam_nam.csv</code></h3>"
-    + table(dict_head, macro_rows, "dict")
+    + table(["Tên trong CSV", "Tên gốc (FRED / IMF / NHNN)", "Loại", "Đơn vị", "Dùng trong báo cáo"], macro_rows, "dict")
     + "<h3>0.5. Biến mới — <code>bien_moi_quy.csv</code></h3>"
     + table(["Tên trong CSV", "Công thức", "Loại", "Đơn vị", "Dùng cho"], new_rows, "dict")
     + code_block("s0", "0.6"))
@@ -342,9 +343,9 @@ sec("s5", "5. Thống kê mô tả",
 
 # ---------- 6 ----------
 sec("s6", "6. Trực quan hóa (1): chất lượng và độ phủ dữ liệu",
-    "<ul><li><b>Hình 6.1</b> — mã nào có số liệu ở quý nào. Cân đối kế toán chỉ có 4 quý cuối; vài mã thiếu 2024Q2.</li>"
-    "<li><b>Hình 6.2</b> — số ô trống theo biến. Phần lớn là các khoản ít khi phát sinh (lợi nhuận liên kết, bất động "
-    "sản đầu tư).</li>"
+    "<ul><li><b>Hình 6.1</b> — mã nào có số liệu ở quý nào. Cân đối kế toán chỉ có 4 quý cuối; DXG, KDH, NLG, NVL, SRC thiếu 2024Q2 và NVL thiếu thêm 2025Q2.</li>"
+    "<li><b>Hình 6.2</b> — số ô trống theo biến. Nhiều nhất là lợi nhuận từ công ty liên kết và bất động sản đầu tư "
+    "(khoản không phải DN nào cũng có) và EPS cơ bản (Vietstock không ghi cho nhiều quý).</li>"
     "<li><b>Hình 6.3</b> — lãi suất Fed, lợi suất UST 10 năm và lãi suất tái cấp vốn NHNN theo quý; nền cam là "
     "giai đoạn 2022Q3–2023Q4. Chuỗi NHNN chỉ bắt đầu từ 10/2022 vì nguồn chỉ trích các quyết định từ đó.</li></ul>"
     + code_block("s6", "6.1"))
@@ -364,13 +365,15 @@ CSS = """
 --out-bg:#fffbe6;--out-head:#fff1bf;--out-line:#f0dfa0;--out-ink:#3d3300;--out-label:#7a5d00}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif}
-.wrap{display:flex;align-items:flex-start;gap:40px;padding:32px 24px 80px;max-width:1320px}
+.top{max-width:1320px;padding:32px 24px 8px}.top h1{margin:0 0 6px}.top .sub{margin:0}
+.wrap{display:flex;align-items:flex-start;gap:40px;padding:8px 24px 80px;max-width:1320px}
 nav{position:sticky;top:24px;flex:0 0 250px;font-size:14.5px}
 nav .t{font-weight:600;margin:0 0 8px}
 nav ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--line)}
 nav a{display:block;padding:5px 0 5px 14px;color:var(--ink2);text-decoration:none;margin-left:-1px;border-left:2px solid transparent}
 nav a:hover{color:var(--ink)}nav a.on{color:var(--ink);border-left-color:var(--ink);font-weight:600}
 main{flex:1 1 auto;min-width:0;max-width:1000px}
+main>section:first-child h2{margin-top:24px}
 h1{font-size:30px;line-height:1.25;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 28px;font-size:15px}
 h2{font-size:26px;margin:52px 0 20px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 h3{font-size:18px;margin:30px 0 12px}p,ul{margin:0 0 14px}ul{padding-left:22px}li{margin:4px 0}a{color:var(--link)}
@@ -398,7 +401,7 @@ border-top:1px solid var(--out-line);border-bottom:1px solid var(--out-line)}
 .pane pre.out{background:var(--out-bg);color:var(--out-ink)}
 .imgs{padding:12px 16px;display:grid;gap:12px;background:var(--out-bg);border-top:1px solid var(--out-line)}
 .imgs img{max-width:100%;height:auto;border:1px solid var(--out-line);background:#fff}
-@media (max-width:900px){.wrap{display:block;padding:20px 16px 60px}nav{position:static;margin-bottom:24px}
+@media (max-width:900px){.top{padding:20px 16px 0}.wrap{display:block;padding:12px 16px 60px}nav{position:static;margin-bottom:24px}
 h1{font-size:24px}h2{font-size:22px}}
 """
 JS = """
@@ -420,11 +423,14 @@ toc = "".join(f'<li><a href="#{sid}">{t}</a></li>' for sid, t, _ in sections)
 doc = f"""<!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trực quan hóa dữ liệu – Nhóm 2</title><style>{CSS}</style></head>
-<body><div class="wrap">
+<body>
+<header class="top">
+<h1>Trực quan hóa dữ liệu: rủi ro thanh khoản của doanh nghiệp BĐS dân cư niêm yết</h1>
+<p class="sub">VietLeap Hackathon 2026 · Nhóm 2 · dữ liệu đến {LATEST} · cập nhật {pd.Timestamp.now():%d/%m/%Y}</p>
+</header>
+<div class="wrap">
 <nav aria-label="Mục lục"><p class="t">Mục lục</p><ol>{toc}</ol></nav>
 <main>
-<h1>Trực quan hóa dữ liệu: rủi ro thanh khoản của doanh nghiệp BĐS dân cư niêm yết</h1>
-<p class="sub">VietLeap Hackathon 2026 · Nhóm 2 · {len(RE)} doanh nghiệp BĐS · dữ liệu đến {LATEST} · cập nhật {pd.Timestamp.now():%d/%m/%Y}</p>
 {"".join(s for _, _, s in sections)}
 </main></div>
 <script>{JS}</script>
